@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Defensor Orbital Avançado</title>
+    <style>
+        body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #0A0A14; /* Um azul muito escuro, quase preto */
+    color: #E0E7FF; /* Branco levemente azulado para o texto geral */
+    font-family: 'Segoe UI', Arial, sans-serif; /* Fonte mais moderna com fallback */
+    overflow: hidden;
+    letter-spacing: 0.5px;
+}
+
+canvas {
+    display: block;
+    touch-action: none; /* Disable default touch actions like scrolling */
+}
+
+/* === UI In-Game (Pontos, Vidas, Onda) === */
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 18px; /* Tamanho base */
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+    z-index: 10;
+    background-color: rgba(10, 20, 40, 0.65); /* Fundo sutil para destacar */
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 175, 255, 0.3); /* Borda sutil azulada */
+    box-shadow: 0 0 15px rgba(0, 120, 200, 0.2);
+    backdrop-filter: blur(8px);
+}
+#ui span { /* Estilo para os labels "Pontos:", "Vidas:" */
+    color: #A0B0FF; /* Um tom mais claro para os labels */
+    font-weight: normal;
+}
+#ui span span { /* Estilo para os valores numéricos */
+    color: #FFFFFF;
+    font-weight: bold;
+}
+#powerUpStatus {
+    display: block; /* Para que ocupe a linha toda */
+    margin-top: 8px;
+    color: #FFD700; /* Amarelo dourado para status de power-up */
+    font-weight: bold;
+}
+
+/* === Telas de Overlay (Geral) === */
+.overlayScreen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(10, 25, 50, 0.88); /* Azul escuro, mais opaco */
+    padding: 35px 45px; /* Mais padding */
+    border-radius: 20px; /* Bordas mais arredondadas */
+    backdrop-filter: blur(8px);
+    text-align: center;
+    display: none; /* Hidden by default */
+    z-index: 20;
+    border: 1.5px solid rgba(0, 175, 255, 0.6); /* Borda azul mais pronunciada */
+    box-shadow: 0 4px 30px rgba(0, 100, 180, 0.3), 0 0 0 2px rgba(0,175,255,0.1) inset; /* Sombra e brilho interno */
+    width: 80%; /* Largura base para responsividade */
+    max-width: 550px; /* Largura máxima */
+    min-width: 280px; /* Largura mínima para não ficar muito estreito */
+    box-sizing: border-box; /* Garante que padding e border não aumentem a largura total */
+}
+
+.overlayScreen h1, .overlayScreen h2 {
+    margin-top: 0;
+    margin-bottom: 20px; /* Espaço abaixo do título */
+    color: #00BFFF; /* Azul ciano brilhante para títulos */
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0, 175, 255, 0.5);
+}
+ .overlayScreen h1 { font-size: 2.2em; }
+ .overlayScreen h2 { font-size: 1.8em; }
+
+.overlayScreen p {
+    margin-bottom: 20px; /* Espaço entre parágrafos */
+    font-size: 1.1em; /* Tamanho de fonte ligeiramente maior para parágrafos */
+    line-height: 1.6;
+    color: #C0D0FF; /* Cor de texto mais suave para parágrafos */
+}
+
+/* === Botões (Estilo Base e Overlays) === */
+.overlayScreen button, #pauseButton {
+    padding: 12px 28px;
+    font-size: 17px;
+    font-weight: bold;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px; /* Bordas arredondadas */
+    cursor: pointer;
+    margin-top: 20px;
+    text-transform: uppercase; /* Deixa o texto do botão em maiúsculas */
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    background-image: linear-gradient(to bottom right, #007ACC, #005C99); /* Gradiente azul */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px rgba(0, 120, 200, 0.3) inset;
+    border: 1px solid #00AFFF;
+    display: inline-block; /* Para controle de largura e margens */
+    width: auto; /* Largura automática por padrão */
+    min-width: 150px; /* Largura mínima para botões */
+}
+
+.overlayScreen button:hover, #pauseButton:hover {
+    background-image: linear-gradient(to bottom right, #00AFFF, #007ACC); /* Gradiente mais claro no hover */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0, 150, 255, 0.5) inset, 0 0 15px rgba(0, 175, 255, 0.4);
+    transform: translateY(-2px); /* Leve elevação */
+}
+
+.overlayScreen button:active, #pauseButton:active {
+    background-image: linear-gradient(to bottom right, #005C99, #004477); /* Gradiente mais escuro no active */
+    transform: translateY(0px) scale(0.98); /* Efeito de pressionar */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* === Botões Específicos (Cores e Tamanhos) === */
+#startButton {
+    padding: 18px 36px; /* Maior para destaque */
+    font-size: 22px;   /* Maior para destaque */
+    background-image: linear-gradient(to bottom right, #00BFFF, #008FCC); /* Azul Ciano mais vibrante */
+    min-width: 200px;
+}
+ #startButton:hover {
+    background-image: linear-gradient(to bottom right, #33CCFF, #00AFFF);
+}
+ #startButton:active {
+    background-image: linear-gradient(to bottom right, #008FCC, #006FAA);
+}
+
+
+#restartButton {
+    background-image: linear-gradient(to bottom right, #4CAF50, #388E3C); /* Verde para recomeçar */
+    border-color: #66BB6A;
+}
+#restartButton:hover {
+    background-image: linear-gradient(to bottom right, #66BB6A, #4CAF50);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 15px rgba(76, 175, 80, 0.5) inset, 0 0 15px rgba(76, 175, 80, 0.4);
+}
+#restartButton:active {
+    background-image: linear-gradient(to bottom right, #388E3C, #2E7D32);
+}
+
+/* === Botão de Pausa e Container === */
+#pauseButtonContainer {
+    position: absolute;
+    top: 20px; /* Alinhado com a UI de score */
+    right: 20px;
+    z-index: 10;
+}
+
+#pauseButton {
+    background-image: linear-gradient(to bottom right, #ff9800, #f57c00); /* Laranja para Pausa */
+    border-color: #ffb74d;
+    margin-top: 0; /* Remover margem superior pois já tem container */
+    padding: 10px 20px; /* Padding menor para o botão de pausa */
+    font-size: 16px;
+    min-width: auto; /* Permitir que seja menor */
+}
+#pauseButton:hover {
+    background-image: linear-gradient(to bottom right, #ffb74d, #ff9800);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 15px rgba(255, 152, 0, 0.5) inset, 0 0 15px rgba(255, 152, 0, 0.4);
+}
+#pauseButton:active {
+    background-image: linear-gradient(to bottom right, #f57c00, #e65100);
+}
+
+/* === Ajustes Finais para Telas Específicas (se necessário) === */
+#startScreen {
+    padding: 50px 60px; /* Padding maior para a tela inicial */
+    border-radius: 25px; /* Mais arredondado para a tela inicial */
+}
+#startScreen h1 {
+    font-size: 2.8em; /* Título maior na tela inicial */
+    color: #33CCFF; /* Um azul ciano ainda mais brilhante */
+}
+
+/* Para a animação de shake (já existe no script, apenas garantindo que não haja conflito) */
+@keyframes shake {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-0.5deg); }
+    20% { transform: translate(1px, 0px) rotate(0.5deg); }
+    30% { transform: translate(2px, 1px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(0.5deg); }
+    50% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+}
+
+/* === Media Queries para Responsividade === */
+
+/* Telas Médias (Tablets e Celulares Maiores em Paisagem) */
+@media (max-width: 768px) {
+    #ui {
+        top: 15px;
+        left: 15px;
+        font-size: 16px;
+        padding: 12px 18px;
+    }
+
+    .overlayScreen {
+        padding: 25px 30px;
+        width: 85%;
+    }
+
+    .overlayScreen h1 { font-size: 1.8em; }
+    .overlayScreen h2 { font-size: 1.5em; }
+    .overlayScreen p { font-size: 1em; line-height: 1.5; }
+
+    .overlayScreen button, #pauseButton {
+        padding: 10px 22px;
+        font-size: 15px;
+        min-width: 130px;
+    }
+
+    #startButton {
+        padding: 15px 30px;
+        font-size: 18px;
+        min-width: 180px;
+    }
+
+    #pauseButton {
+        padding: 8px 15px;
+        font-size: 14px;
+    }
+    #pauseButtonContainer {
+        top: 15px;
+        right: 15px;
+    }
+
+    #startScreen {
+        padding: 35px 40px;
+    }
+    #startScreen h1 {
+        font-size: 2.2em;
+    }
+}
+
+/* Telas Pequenas (Celulares em Retrato) */
+@media (max-width: 480px) {
+    #ui {
+        top: 10px;
+        left: 10px;
+        font-size: 13px;
+        padding: 8px 12px;
+        border-radius: 8px;
+    }
+    #ui span br { display: none; } /* Evitar quebras de linha desnecessárias */
+    #ui span:not(:last-child)::after { content: " | "; } /* Separador em linha única */
+
+
+    #powerUpStatus {
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+
+    .overlayScreen {
+        padding: 20px; /* Menos padding lateral */
+        width: 90%; /* Ocupar mais da largura da tela */
+        border-radius: 15px;
+    }
+    .overlayScreen h1 { font-size: 1.6em; margin-bottom: 15px; }
+    .overlayScreen h2 { font-size: 1.3em; margin-bottom: 10px; }
+    .overlayScreen p { font-size: 0.9em; line-height: 1.4; margin-bottom: 15px; }
+
+    .overlayScreen button {
+        padding: 10px 18px;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        width: 100%; /* Botões ocupam largura total */
+        margin-top: 10px;
+        margin-left: 0;
+        margin-right: 0;
+        box-sizing: border-box; /* Para que width: 100% inclua padding e border */
+        min-width: 0; /* Resetar min-width */
+    }
+    .overlayScreen button:not(:last-child) {
+        margin-bottom: 5px; /* Pequeno espaço entre botões empilhados */
+    }
+
+
+    #startButton {
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+
+    #pauseButtonContainer {
+        top: 10px;
+        right: 10px;
+    }
+    #pauseButton {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+
+    #startScreen {
+        padding: 25px;
+    }
+    #startScreen h1 {
+        font-size: 1.9em;
+    }
+}
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <span>Pontos: <span id="score">0</span></span><br>
+        <span>Vidas: <span id="lives">3</span></span><br>
+        <span>Onda: <span id="wave">1</span></span><br>
+        <span id="powerUpStatus" style="color: yellow;"></span>
+    </div>
+
+    <div id="pauseButtonContainer">
+        <button id="pauseButton">Pausar</button>
+    </div>
+
+    <div id="startScreen" class="overlayScreen" style="display: flex; padding: 40px; border-radius: 15px;">
+        <div>
+            <h1>Defensor Orbital</h1>
+            <p>Gire o escudo para proteger o núcleo!</p>
+            <p>Deslize o dedo ou mova o mouse ao redor do centro.</p>
+            <button id="startButton">Iniciar Jogo</button>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="overlayScreen">
+        <h2>Fim de Jogo!</h2>
+        <p>Pontuação Final: <span id="finalScore">0</span></p>
+        <button id="restartButton">Jogar Novamente</button>
+    </div>
+
+    <div id="pauseScreen" class="overlayScreen">
+        <h2>Jogo Pausado</h2>
+        <button id="resumeButton">Continuar</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const gameAssets = {
+            planet: null,
+            defender: null,
+            enemyNormal: null, // Variedade visual: Poderia ser um array se assets de variação fossem fornecidos
+            enemyFast: null,
+            enemyTough: null,
+            enemyShooter: null,
+            powerUpSlowMotion: null,
+            powerUpWideShield: null,
+            powerUpInvincibility: null,
+            projectile: null,
+            backgroundLayer1: null,
+            backgroundLayer2: null,
+            backgroundLayer3: null, // NOVA CAMADA DE PARALAXE
+        };
+
+        const assetSources = {
+            planet: 'path/to/your/planet-sprite.png', // <<< REPLACE
+            defender: 'path/to/your/defender-sprite.png', // <<< REPLACE
+            enemyNormal: 'path/to/your/enemy-normal-sprite.png', // <<< REPLACE (ou array para variedade)
+            enemyFast: 'path/to/your/enemy-fast-sprite.png', // <<< REPLACE
+            enemyTough: 'path/to/your/enemy-tough-sprite.png', // <<< REPLACE
+            enemyShooter: 'path/to/your/enemy-shooter-sprite.png', // <<< REPLACE
+            powerUpSlowMotion: 'path/to/your/powerup-slowmo-sprite.png', // <<< REPLACE
+            powerUpWideShield: 'path/to/your/powerup-wideshield-sprite.png', // <<< REPLACE
+            powerUpInvincibility: 'path/to/your/powerup-invincibility-sprite.png', // <<< REPLACE
+            projectile: 'path/to/your/projectile-sprite.png', // <<< REPLACE (optional)
+            backgroundLayer1: 'path/to/your/background-stars.png', // <<< REPLACE
+            backgroundLayer2: 'path/to/your/background-nebula.png', // <<< REPLACE
+            backgroundLayer3: 'path/to/your/background-deep-space.png', // <<< REPLACE (NOVA CAMADA)
+        };
+
+        let assetsToLoadCount = Object.keys(assetSources).length;
+        let assetsLoadedCount = 0;
+
+        function assetLoaded() {
+            assetsLoadedCount++;
+            if (assetsLoadedCount === assetsToLoadCount) {
+                allAssetsLoaded();
+            }
+        }
+
+        function allAssetsLoaded() {
+            console.log("Todos os recursos carregados!");
+            startButton.disabled = false;
+            startButton.textContent = "Iniciar Jogo";
+            planet.sprite = gameAssets.planet;
+            defender.sprite = gameAssets.defender;
+            // Inimigos e power-ups atribuem sprites em seus construtores
+            initBackgroundLayers();
+        }
+
+
+        function loadAssets() {
+            let initialAssetsToLoad = 0;
+            for (const key in assetSources) {
+                // Para variedade visual de inimigos, assetSources[key] poderia ser um array.
+                // A lógica de carregamento precisaria ser ajustada para lidar com isso.
+                // Por ora, mantemos simples.
+                if (assetSources[key] && typeof assetSources[key] === 'string' && !assetSources[key].startsWith('path/to/your/')) {
+                    initialAssetsToLoad++;
+                }
+            }
+            assetsToLoadCount = initialAssetsToLoad;
+
+            if (assetsToLoadCount === 0) {
+                allAssetsLoaded();
+                return;
+            }
+
+            for (const key in assetSources) {
+                if (assetSources[key] && typeof assetSources[key] === 'string' && !assetSources[key].startsWith('path/to/your/')) {
+                    gameAssets[key] = new Image();
+                    gameAssets[key].src = assetSources[key];
+                    gameAssets[key].onload = () => {
+                        console.log(`Recurso carregado: ${key}`);
+                        assetLoaded();
+                    };
+                    gameAssets[key].onerror = () => {
+                        console.error(`Falha ao carregar o recurso: ${key} de ${assetSources[key]}`);
+                        assetLoaded();
+                    };
+                } else if (Array.isArray(assetSources[key])) { // Placeholder para carregar array de sprites
+                    console.warn(`Recurso '${key}' é um array, lógica de carregamento para múltiplas sprites precisa ser implementada.`);
+                    // Aqui você implementaria o carregamento de cada imagem no array
+                    // e possivelmente armazenaria em gameAssets[key] como um array de Image objects.
+                    // Para simplificar, vamos contar como "carregado" para não bloquear.
+                    // assetsToLoadCount--; // Ajustar contagem se for tratar de forma diferente
+                }
+            }
+        }
+
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const waveEl = document.getElementById('wave');
+        const powerUpStatusEl = document.getElementById('powerUpStatus');
+
+        const startScreen = document.getElementById('startScreen');
+        const startButton = document.getElementById('startButton');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const restartButton = document.getElementById('restartButton');
+
+        const pauseButton = document.getElementById('pauseButton');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const resumeButton = document.getElementById('resumeButton');
+
+        let canvasWidth, canvasHeight, centerX, centerY;
+
+        const PLANET_RADIUS = 30;
+        const DEFENDER_ORBIT_RADIUS = 80;
+        const DEFENDER_ARC_SIZE_BASE = Math.PI / 3;
+        const DEFENDER_THICKNESS = 15;
+        const ENEMY_SPAWN_DISTANCE_FACTOR = 1.1;
+        const POWER_UP_DURATION = 7000; //ms
+        const ENEMY_HIT_SHAKE_DURATION = 300; //ms
+        const PROJECTILE_RADIUS = 5;
+        const PROJECTILE_SPEED = 3;
+        const INITIAL_DEFENDER_ARC_MULTIPLIER = 5.0;
+        const DEFENDER_ARC_DECAY_RATE = 0.015;
+
+        let defenderAngle = 0;
+        let score = 0;
+        let lives = 3;
+        let wave = 1;
+        let enemies = [];
+        let powerUps = [];
+        let projectiles = [];
+        let particles = [];
+        let gameRunning = false;
+        let gameOver = false;
+        let isPaused = false;
+        let gameLoopActive = false;
+
+        let activePowerUp = null;
+        let powerUpTimer = 0;
+
+        const ENEMY_TYPES = {
+            NORMAL: { color: '#FF4136', speed: 1.5, radius: 8, health: 1, points: 10, type: 'NORMAL' },
+            FAST: { color: '#FFDC00', speed: 2.5, radius: 6, health: 1, points: 15, type: 'FAST' },
+            TOUGH: { color: '#0074D9', speed: 1, radius: 12, health: 3, points: 30, type: 'TOUGH' },
+            SHOOTER: { color: '#B10DC9', speed: 1.2, radius: 10, health: 2, points: 25, type: 'SHOOTER', shootCooldown: 3000, shootRangeFactor: 4 }
+        };
+
+        const POWER_UP_TYPES = {
+            SLOW_MOTION: { color: '#39CCCC', radius: 10, name: 'Câmera Lenta', id: 'SLOW_MOTION' },
+            WIDE_SHIELD: { color: '#F012BE', radius: 10, name: 'Escudo Maior', id: 'WIDE_SHIELD' },
+            INVINCIBILITY: { color: '#FF851B', radius: 10, name: 'Invencibilidade', id: 'INVINCIBILITY' }
+        };
+
+        let isPlanetInvincible = false;
+
+        const backgroundLayers = [];
+        const BG_LAYER1_SPEED = 0.05;
+        const BG_LAYER2_SPEED = 0.15;
+        const BG_LAYER3_SPEED = 0.02; // NOVA VELOCIDADE PARA CAMADA 3
+
+        // Elementos dinâmicos do Background
+        let blinkingStars = [];
+        const NUM_BLINKING_STARS = 120; // Aumentado para mais estrelas
+
+        function initBlinkingStars() {
+            blinkingStars = [];
+            for (let i = 0; i < NUM_BLINKING_STARS; i++) {
+                blinkingStars.push({
+                    x: Math.random() * canvasWidth,
+                    y: Math.random() * canvasHeight,
+                    size: Math.random() * 1.5 + 0.3, // Algumas bem pequenas
+                    alpha: Math.random() * 0.8, // Começam com alfa variado
+                    blinkSpeed: Math.random() * 0.03 + 0.005,
+                    alphaDirection: Math.random() < 0.5 ? 1 : -1
+                });
+            }
+        }
+
+        function updateBlinkingStars(deltaTime) {
+            const dtFactor = deltaTime / 16.67;
+            blinkingStars.forEach(star => {
+                star.alpha += star.blinkSpeed * star.alphaDirection * dtFactor;
+                if (star.alpha > (0.8 + Math.random() * 0.2)) { // Limite superior um pouco aleatório
+                    star.alpha = (0.8 + Math.random() * 0.2);
+                    star.alphaDirection = -1;
+                }
+                if (star.alpha < (0.1 + Math.random() * 0.2)) { // Limite inferior um pouco aleatório
+                    star.alpha = (0.1 + Math.random() * 0.2);
+                    star.alphaDirection = 1;
+                }
+            });
+        }
+
+        function drawBlinkingStars() {
+            blinkingStars.forEach(star => {
+                ctx.fillStyle = `rgba(220, 220, 255, ${star.alpha})`; // Cor levemente azulada
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function spawnDistantDebris() {
+            // Chance de spawnar "galáxias/nebulosas"
+            if (Math.random() < 0.015 * (deltaTime/16.67)) { // Chance menor, ajustada pelo deltaTime
+                const side = Math.floor(Math.random() * 4);
+                let x, y, vx, vy;
+                const baseSpeed = Math.random() * 0.03 + 0.005; // Muito, muito lento
+                const size = Math.random() * 200 + 150; // Maiores
+                if (side === 0) { x = Math.random() * canvasWidth; y = -size; vx = (Math.random() - 0.5) * 0.01; vy = baseSpeed; }
+                else if (side === 1) { x = Math.random() * canvasWidth; y = canvasHeight + size; vx = (Math.random() - 0.5) * 0.01; vy = -baseSpeed; }
+                else if (side === 2) { x = -size; y = Math.random() * canvasHeight; vx = baseSpeed; vy = (Math.random() - 0.5) * 0.01; }
+                else { x = canvasWidth + size; y = Math.random() * canvasHeight; vx = -baseSpeed; vy = (Math.random() - 0.5) * 0.01; }
+
+                // Cores mais nebulosas e translúcidas
+                const r = 80 + Math.random() * 70; // Tons de roxo, azul, rosa
+                const g = 60 + Math.random() * 70;
+                const b = 100 + Math.random() * 80;
+                const baseAlphaForNebula = Math.random() * 0.025 + 0.005; // Alfa muito baixo (ex: 0.005 a 0.03)
+                const nebulaColor = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${baseAlphaForNebula.toFixed(4)})`;
+
+                const nebula = new Particle(x, y, nebulaColor, size, 0, 60000 + Math.random()*30000, 0, 0, 'nebula');
+                nebula.vx = vx;
+                nebula.vy = vy;
+                // rotationSpeed é definido no construtor Particle para nebulas
+                particles.push(nebula);
+            }
+
+            // Detritos normais
+            if (Math.random() < 0.02 * (deltaTime/16.67)) {
+                const side = Math.floor(Math.random() * 4);
+                let x, y, vx, vy;
+                const speed = Math.random() * 0.15 + 0.03;
+                const size = Math.random() * 2.5 + 1.5;
+                if (side === 0) { x = Math.random() * canvasWidth; y = -size; vx = (Math.random() - 0.5) * 0.05; vy = speed; }
+                else if (side === 1) { x = Math.random() * canvasWidth; y = canvasHeight + size; vx = (Math.random() - 0.5) * 0.05; vy = -speed; }
+                else if (side === 2) { x = -size; y = Math.random() * canvasHeight; vx = speed; vy = (Math.random() - 0.5) * 0.05; }
+                else { x = canvasWidth + size; y = Math.random() * canvasHeight; vx = -speed; vy = (Math.random() - 0.5) * 0.05; }
+
+                const debrisColor = `rgba(${100 + Math.random()*50}, ${100 + Math.random()*50}, ${100 + Math.random()*50}, ${Math.random()*0.4 + 0.2})`;
+                const debris = new Particle(x, y, debrisColor, size, 0, 25000 + Math.random()*15000, 0, 0, Math.random() < 0.6 ? 'square' : 'circle');
+                debris.vx = vx;
+                debris.vy = vy;
+                debris.rotationSpeed = (Math.random() - 0.5) * 0.003;
+                particles.push(debris);
+            }
+        }
+
+
+        function initBackgroundLayers() {
+            backgroundLayers.length = 0;
+            if (gameAssets.backgroundLayer3 && gameAssets.backgroundLayer3.complete) { // MAIS PROFUNDA PRIMEIRO
+                backgroundLayers.push({
+                    img: gameAssets.backgroundLayer3,
+                    speed: BG_LAYER3_SPEED,
+                    offsetX: 0,
+                    width: gameAssets.backgroundLayer3.width,
+                    height: gameAssets.backgroundLayer3.height
+                });
+            }
+            if (gameAssets.backgroundLayer1 && gameAssets.backgroundLayer1.complete) {
+                backgroundLayers.push({
+                    img: gameAssets.backgroundLayer1,
+                    speed: BG_LAYER1_SPEED,
+                    offsetX: 0,
+                    width: gameAssets.backgroundLayer1.width,
+                    height: gameAssets.backgroundLayer1.height
+                });
+            }
+            if (gameAssets.backgroundLayer2 && gameAssets.backgroundLayer2.complete) {
+                backgroundLayers.push({
+                    img: gameAssets.backgroundLayer2,
+                    speed: BG_LAYER2_SPEED,
+                    offsetX: 0,
+                    width: gameAssets.backgroundLayer2.width,
+                    height: gameAssets.backgroundLayer2.height
+                });
+            }
+            initBlinkingStars(); // Inicializar estrelas após assets de fundo
+        }
+
+        function drawBackground() {
+            if (backgroundLayers.length === 0) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0,0, canvasWidth, canvasHeight);
+            } else {
+                 ctx.fillStyle = '#080810'; // Cor de fundo base caso as imagens não cubram tudo
+                 ctx.fillRect(0,0, canvasWidth, canvasHeight);
+            }
+
+            backgroundLayers.forEach(layer => {
+                if (layer.img && layer.img.complete && layer.width > 0 && layer.height > 0) {
+                    layer.offsetX -= layer.speed * (deltaTime / 16.67); // Normalizar por frame time
+                    if (layer.offsetX <= -layer.width) {
+                        layer.offsetX = 0;
+                    }
+
+                    const aspectRatio = layer.width / layer.height;
+                    let scaledHeight = canvasHeight;
+                    let scaledWidth = scaledHeight * aspectRatio;
+
+                    if (scaledWidth < canvasWidth) { // Se a imagem for mais estreita que a tela, escalar pela largura
+                        scaledWidth = canvasWidth;
+                        scaledHeight = scaledWidth / aspectRatio;
+                    }
+
+
+                    let currentX = layer.offsetX;
+                    while (currentX < canvasWidth) {
+                        ctx.drawImage(layer.img, currentX, (canvasHeight - scaledHeight) / 2, scaledWidth, scaledHeight);
+                        currentX += scaledWidth;
+                    }
+                     // Draw one more potentially off-screen to the left to cover the gap when resetting
+                    if (layer.offsetX < 0) { // Garante que não haja buracos
+                         ctx.drawImage(layer.img, layer.offsetX - scaledWidth +1 , (canvasHeight - scaledHeight) / 2, scaledWidth, scaledHeight);
+                    }
+                }
+            });
+            drawBlinkingStars(); // Desenhar estrelas por cima das camadas de paralaxe
+        }
+
+
+        class Particle {
+            constructor(x, y, color, size, speed, life, emissionAngle = Math.random() * Math.PI * 2, spread = Math.PI * 2, shape = 'circle') {
+                this.x = x;
+                this.y = y;
+                this.initialSize = size;
+                //this.size = Math.random() * size * 0.5 + size * 0.75; // Variação inicial movida para lógica condicional
+                this.color = color;
+                this.life = Math.random() * life * 0.5 + life * 0.75;
+                this.maxLife = this.life;
+                this.shape = shape;
+
+                const actualAngle = emissionAngle - spread / 2 + Math.random() * spread;
+                const actualSpeed = Math.random() * speed * 0.8 + speed * 0.6;
+                this.vx = Math.cos(actualAngle) * actualSpeed;
+                this.vy = Math.sin(actualAngle) * actualSpeed;
+
+                this.rotation = Math.random() * Math.PI * 2;
+                //this.rotationSpeed = (Math.random() - 0.5) * 0.1 * (actualSpeed * 0.2); // Movido para lógica condicional
+
+                this.isNebula = (this.shape === 'nebula');
+                if (this.isNebula) {
+                    this.size = size; // Nebulosas usam o tamanho direto fornecido
+                    this.rotationSpeed = (Math.random() - 0.5) * 0.0005; // Rotação muito lenta para nebulosas
+
+                    const colorParts = this.color.split(',');
+                    if (colorParts.length === 4) { // Verifica se é um rgba válido
+                        const alphaString = colorParts[3].replace(')','').trim();
+                        this.originalNominalAlpha = parseFloat(alphaString);
+                    } else {
+                        this.originalNominalAlpha = 0.01; // Fallback
+                    }
+
+                    this.currentAlpha = this.originalNominalAlpha;
+                    this.alphaFluctuation = Math.random() * this.originalNominalAlpha * 0.5 + this.originalNominalAlpha * 0.2; // Flutuação proporcional
+                    this.alphaFluctuationSpeed = (Math.random() * 0.002 + 0.001) * (Math.random() < 0.5 ? 1 : -1);
+                    this.alphaTimer = Math.random() * Math.PI * 2; // Fase aleatória para pulsação
+                } else {
+                    this.size = Math.random() * size * 0.5 + size * 0.75; // Variação de tamanho para partículas normais
+                    this.rotationSpeed = (Math.random() - 0.5) * 0.1 * (actualSpeed * 0.2); // Rotação normal
+                }
+            }
+
+            update(deltaTime) {
+                const dtFactor = deltaTime / 16.67;
+                this.x += this.vx * dtFactor;
+                this.y += this.vy * dtFactor;
+                this.life -= deltaTime;
+                this.rotation += this.rotationSpeed * dtFactor;
+
+                if (this.isNebula) {
+                    // Nebulosas não encolhem, mas seu alfa pode pulsar
+                    this.alphaTimer += this.alphaFluctuationSpeed * dtFactor;
+                    this.currentAlpha = this.originalNominalAlpha + Math.sin(this.alphaTimer) * this.alphaFluctuation;
+                    // Mantém o alfa sutil e dentro de limites razoáveis
+                    this.currentAlpha = Math.max(0.001, Math.min(this.originalNominalAlpha * 2.5, this.currentAlpha));
+                } else {
+                    this.size *= (1 - (0.01 * dtFactor)); // Reduzir tamanho com base no tempo de vida
+                    if (this.size < 0.5) this.size = 0.5;
+                }
+            }
+
+            draw() {
+                if (this.life <= 0 || (!this.isNebula && this.size <= 0.5)) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                if (this.isNebula) {
+                    const baseColorParts = this.color.split(',');
+                    const baseColorRGB = baseColorParts.slice(0, 3).join(',') + ','; // Extrai "rgba(r,g,b,"
+                    const dynamicColor = baseColorRGB + Math.max(0, Math.min(1, this.currentAlpha)).toFixed(4) + ')';
+
+                    ctx.fillStyle = dynamicColor;
+                    const layers = 2; // 2-3 camadas para o efeito de nebulosa
+                    const baseRadius = this.size / 2;
+
+                    for (let i = 0; i < layers; i++) {
+                        const layerRadius = baseRadius * (1 - i * 0.3); // Camadas internas um pouco menores
+                        ctx.beginPath();
+                        ctx.arc(0, 0, layerRadius, 0, Math.PI * 2);
+                        // Desfoque progressivo ou fixo. Um desfoque maior para nebulosas maiores pode ser bom.
+                        ctx.filter = `blur(${Math.floor(baseRadius * 0.05 * (i + 1) + 8)}px)`; // Ajustar o blur conforme necessário
+                        ctx.fill();
+                    }
+                    ctx.filter = 'none'; // Resetar o filtro é crucial
+
+                } else { // Lógica de desenho para partículas normais
+                    const opacity = Math.max(0, this.life / this.maxLife);
+                    ctx.globalAlpha = opacity;
+
+                    if (this.shape === 'square') {
+                        ctx.fillStyle = this.color;
+                        ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                    } else if (this.shape === 'spark') {
+                        ctx.beginPath();
+                        ctx.moveTo(0, -this.size * 0.75);
+                        ctx.lineTo(0, this.size * 0.75);
+                        ctx.strokeStyle = this.color;
+                        ctx.lineWidth = Math.max(1, this.size / 3);
+                        ctx.stroke();
+                    } else { // Default 'circle'
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                        ctx.fillStyle = this.color;
+                        ctx.fill();
+                    }
+                    ctx.globalAlpha = 1;
+                }
+                ctx.restore();
+            }
+        }
+
+        // Parâmetros: x, y, count, color, baseSize, baseSpeed, baseLife, emissionAngle, spread, shape
+        function emitParticles(x, y, count, color, baseSize = 3, baseSpeed = 1, baseLife = 500, emissionAngle = 0, spread = Math.PI * 2, shape = 'circle') {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color, baseSize, baseSpeed, baseLife, emissionAngle, spread, shape));
+            }
+        }
+
+
+        function resizeCanvas() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            centerX = canvasWidth / 2;
+            centerY = canvasHeight / 2;
+            if (planet) {
+                 planet.x = centerX;
+                 planet.y = centerY;
+            }
+            // Re-initialize background related elements that depend on canvas size
+            if (gameAssets.backgroundLayer1 || gameAssets.backgroundLayer2 || gameAssets.backgroundLayer3) { // Only if assets might be loaded
+                 initBackgroundLayers();
+            } else {
+                 initBlinkingStars(); // Still init stars if no BG images
+            }
+        }
+
+        function degToRad(degrees) { return degrees * Math.PI / 180; }
+        function distance(x1, y1, x2, y2) { return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2); }
+        function normalizeAngle(angle) { return (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI); }
+
+        class Planet {
+            constructor(x, y, radius, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.color = color;
+                this.baseColor = color;
+                this.sprite = gameAssets.planet;
+                this.spriteWidth = radius * 2.8;
+                this.spriteHeight = radius * 2.8;
+                this.rotation = 0;
+                this.pulseSize = 0;
+                this.pulseDirection = 1;
+                this.pulseSpeed = 0.025; // Sutil
+                this.maxPulse = 1.2;    // Sutil
+                // Para animação de nuvens (se fosse um spritesheet):
+                // this.cloudFrame = 0; this.cloudFrameTimer = 0; this.cloudFrameDuration = 100;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                this.rotation += 0.0004 * deltaTime; // Rotação um pouco mais lenta
+                if (this.rotation > Math.PI * 2) this.rotation -= Math.PI * 2;
+
+
+                this.pulseSize += this.pulseSpeed * this.pulseDirection * (deltaTime / 16.67);
+                if (this.pulseSize > this.maxPulse || this.pulseSize < -this.maxPulse/2.5) {
+                    this.pulseDirection *= -1;
+                }
+
+                if (this.sprite && this.sprite.complete) {
+                    ctx.rotate(this.rotation); // Rotacionar antes de desenhar sprite
+                    const currentWidth = this.spriteWidth + this.pulseSize;
+                    const currentHeight = this.spriteHeight + this.pulseSize;
+                    ctx.drawImage(this.sprite, -currentWidth / 2, -currentHeight / 2, currentWidth, currentHeight);
+                    // Se tivesse animação de nuvens em um sprite separado ou sheet:
+                    // ctx.drawImage(nuvemSprite, frameX, frameY, frameW, frameH, -currentWidth/2, -currentHeight/2, currentWidth, currentHeight);
+                } else {
+                    ctx.rotate(this.rotation); // Rotacionar antes de desenhar forma
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius + this.pulseSize/2, 0, Math.PI * 2); // Aplicar pulso ao raio
+                    ctx.fillStyle = this.baseColor;
+                    ctx.fill();
+                }
+                ctx.restore(); // Restore antes de desenhar o brilho da invencibilidade
+
+                if (isPlanetInvincible) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2); // Aumentado raio do brilho
+                    const glowSize = Math.sin(Date.now() / 120) * 8 + 15; // Brilho mais dinâmico
+                    ctx.shadowColor = POWER_UP_TYPES.INVINCIBILITY.color;
+                    ctx.shadowBlur = 20 + glowSize;
+                    ctx.strokeStyle = POWER_UP_TYPES.INVINCIBILITY.color + "AA"; // Com alpha
+                    ctx.lineWidth = 3.5; // Mais grosso
+                    ctx.stroke();
+                    ctx.shadowBlur = 0; // Reset shadow IMPORTANT
+                }
+                // Contorno base do planeta
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = isPlanetInvincible ? POWER_UP_TYPES.INVINCIBILITY.color : '#00FFFF';
+                ctx.lineWidth = isPlanetInvincible ? 2.5 : 1.5; // Linhas um pouco mais grossas
+                ctx.stroke();
+            }
+        }
+
+        class Defender {
+            constructor(orbitRadius, arcSize, thickness, color) {
+                this.orbitRadius = orbitRadius;
+                this.baseArcSize = arcSize;
+                this.currentArcSize = arcSize;
+                this.thickness = thickness;
+                this.color = color;
+                this.sprite = gameAssets.defender;
+                this.spriteHeight = this.thickness * 2.5;
+                this.baseSpriteWidth = (this.orbitRadius) * this.baseArcSize * 1.2;
+            }
+
+            draw(angle) {
+                const startAngle = angle - this.currentArcSize / 2;
+                const endAngle = angle + this.currentArcSize / 2;
+                let currentSpriteWidth = this.baseSpriteWidth * (this.currentArcSize / this.baseArcSize);
+
+                if (this.sprite && this.sprite.complete) {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(angle);
+                    ctx.drawImage(
+                        this.sprite,
+                        this.orbitRadius - this.thickness,
+                        -this.spriteHeight / 2,
+                        currentSpriteWidth,
+                        this.spriteHeight
+                    );
+                    ctx.restore();
+
+                    if (activePowerUp && activePowerUp.type.id === POWER_UP_TYPES.WIDE_SHIELD.id) {
+                        ctx.beginPath();
+                        const wideStart = angle - (this.currentArcSize / 2) - 0.05;
+                        const wideEnd = angle + (this.currentArcSize / 2) + 0.05;
+                        ctx.arc(centerX, centerY, this.orbitRadius, wideStart, wideEnd, false);
+                        ctx.lineWidth = this.thickness * 0.5; // Glow um pouco mais espesso
+                        ctx.strokeStyle = POWER_UP_TYPES.WIDE_SHIELD.color + "AA"; // Mais visível
+                        ctx.shadowColor = POWER_UP_TYPES.WIDE_SHIELD.color;
+                        ctx.shadowBlur = 10;
+                        ctx.stroke();
+                        ctx.shadowBlur = 0; // Reset
+                    }
+
+                } else { // Fallback sem sprite
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, this.orbitRadius - this.thickness / 2, startAngle, endAngle);
+                    ctx.arc(centerX, centerY, this.orbitRadius + this.thickness / 2, endAngle, startAngle, true);
+                    ctx.closePath();
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                }
+            }
+        }
+
+        class Enemy {
+            constructor(type) {
+                this.typeDetails = type;
+                this.radius = this.typeDetails.radius;
+                this.color = this.typeDetails.color;
+                this.speed = this.typeDetails.speed;
+                this.health = this.typeDetails.health;
+                this.points = this.typeDetails.points;
+                this.originalSpeed = this.speed;
+                this.type = this.typeDetails.type;
+                this.rotation = 0;
+                this.hitFlashTimer = 0;
+
+                // Animação Idle (bobbing)
+                this.idleAnimTimer = Math.random() * Math.PI * 2; // Fase aleatória
+                this.idleAnimValue = 0;
+                this.idleAnimMagnitude = this.radius * 0.15; // Quão grande é o "bob"
+
+                // Variedade Visual: Se assetSources[key] fosse um array de paths,
+                // e gameAssets[key] um array de Images, a seleção seria aqui.
+                // Ex: const spriteVariations = gameAssets['enemy' + this.type];
+                // this.sprite = spriteVariations[Math.floor(Math.random() * spriteVariations.length)];
+                switch(this.type) {
+                    case ENEMY_TYPES.NORMAL.type: this.sprite = gameAssets.enemyNormal; break;
+                    case ENEMY_TYPES.FAST.type: this.sprite = gameAssets.enemyFast; break;
+                    case ENEMY_TYPES.TOUGH.type: this.sprite = gameAssets.enemyTough; break;
+                    case ENEMY_TYPES.SHOOTER.type: this.sprite = gameAssets.enemyShooter; break;
+                    default: this.sprite = null;
+                }
+                this.spriteWidth = this.radius * 3;
+                this.spriteHeight = this.radius * 3;
+
+                if (this.type === ENEMY_TYPES.SHOOTER.type) {
+                    this.shootCooldown = this.typeDetails.shootCooldown;
+                    this.shootTimer = Math.random() * this.shootCooldown;
+                    this.shootRange = PLANET_RADIUS * this.typeDetails.shootRangeFactor * 1.5;
+                }
+
+                const spawnAngle = Math.random() * Math.PI * 2;
+                const spawnDist = Math.max(canvasWidth, canvasHeight) * ENEMY_SPAWN_DISTANCE_FACTOR / 2 + this.radius;
+                this.x = centerX + spawnDist * Math.cos(spawnAngle);
+                this.y = centerY + spawnDist * Math.sin(spawnAngle);
+
+                const angleToCenter = Math.atan2(centerY - this.y, centerX - this.x);
+                this.dx = Math.cos(angleToCenter) * this.speed;
+                this.dy = Math.sin(angleToCenter) * this.speed;
+                this.rotation = angleToCenter + Math.PI / 2;
+            }
+
+            update() {
+                const dtFactor = deltaTime / 16.67;
+                if (this.hitFlashTimer > 0) this.hitFlashTimer -= deltaTime;
+
+                // Atualiza animação idle
+                this.idleAnimTimer += 0.08 * dtFactor; // Velocidade do bobbing
+                this.idleAnimValue = Math.sin(this.idleAnimTimer) * this.idleAnimMagnitude;
+
+                if (activePowerUp && activePowerUp.type.id === POWER_UP_TYPES.SLOW_MOTION.id) {
+                    this.speed = this.originalSpeed * 0.5;
+                } else {
+                    this.speed = this.originalSpeed;
+                }
+                const angleToTarget = Math.atan2(centerY - (this.y + this.idleAnimValue), centerX - this.x); // Target considera o bobbing para dy/dx
+                this.dx = Math.cos(angleToTarget) * this.speed;
+                this.dy = Math.sin(angleToTarget) * this.speed;
+
+                this.x += this.dx * dtFactor;
+                this.y += this.dy * dtFactor;
+                // A rotação do sprite deve seguir a direção real do movimento, não o ângulo para o centro fixo
+                if (this.dx !== 0 || this.dy !== 0) { // Evitar NaN se não houver movimento
+                     this.rotation = Math.atan2(this.dy, this.dx) + Math.PI / 2;
+                }
+
+
+                if (this.type === ENEMY_TYPES.SHOOTER.type) {
+                    this.shootTimer -= deltaTime;
+                    const distToPlanet = distance(this.x, this.y, centerX, centerY);
+                    if (this.shootTimer <= 0 && distToPlanet < this.shootRange && distToPlanet > PLANET_RADIUS + this.radius + 30) {
+                        this.shoot();
+                        this.shootTimer = this.shootCooldown * (0.8 + Math.random() * 0.4);
+                    }
+                }
+            }
+
+            shoot() {
+                const angleToPlanet = Math.atan2(centerY - this.y, centerX - this.x);
+                projectiles.push(new Projectile(this.x, this.y, angleToPlanet, this.typeDetails.color));
+                // Partículas de tiro
+                emitParticles(this.x + Math.cos(angleToPlanet) * this.radius, this.y + Math.sin(angleToPlanet) * this.radius,
+                              10, this.color, 3, 2.5, 300, angleToPlanet, Math.PI / 8, 'spark');
+            }
+
+            draw() {
+                ctx.save();
+                // Aplicar bobbing na posição de translação Y
+                ctx.translate(this.x, this.y + this.idleAnimValue);
+                ctx.rotate(this.rotation);
+
+                if (this.sprite && this.sprite.complete) {
+                    if (this.hitFlashTimer > 0) {
+                        ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(this.hitFlashTimer * 0.02)); // Flash mais suave
+                    }
+                    ctx.drawImage(this.sprite, -this.spriteWidth / 2, -this.spriteHeight / 2, this.spriteWidth, this.spriteHeight);
+                    ctx.globalAlpha = 1.0;
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = (this.hitFlashTimer > 0) ? '#FFDDDD' : this.color; // Cor de flash mais suave
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                if (this.health > 1) { // Desenhar vida na posição original (sem bobbing) para estabilidade
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.health, this.x, this.y + this.radius * 0.1);
+                }
+            }
+
+            takeDamage() {
+                this.health--;
+                this.hitFlashTimer = 200; // Duração do flash um pouco maior
+                // Partículas de dano recebido
+                emitParticles(this.x, this.y, 20, '#FFFFFF', 4, 2.8, 400, Math.random()*Math.PI*2, Math.PI*2, 'spark');
+                if (this.health <= 0) {
+                    // Partículas de destruição mais elaboradas
+                    emitParticles(this.x, this.y, 25, this.color, 5, 3.5, 700, Math.random()*Math.PI*2, Math.PI*2, 'square');
+                    emitParticles(this.x, this.y, 35, shadeColor(this.color, -30), 4, 4, 800, Math.random()*Math.PI*2, Math.PI*2, 'spark');
+                    emitParticles(this.x, this.y, 15, 'white', 3, 3, 600, Math.random()*Math.PI*2, Math.PI*2, 'circle');
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        class Projectile {
+            constructor(x, y, angle, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = PROJECTILE_RADIUS;
+                this.color = color;
+                this.speed = PROJECTILE_SPEED * 1.2;
+                this.dx = Math.cos(angle) * this.speed;
+                this.dy = Math.sin(angle) * this.speed;
+                this.sprite = gameAssets.projectile;
+                this.spriteWidth = this.radius * 2.5;
+                this.spriteHeight = this.radius * 2.5;
+                this.rotation = angle; // Rotação inicial baseada no ângulo de disparo
+                 if(this.sprite && this.sprite.width > this.sprite.height * 1.5) {
+                    this.spriteWidth = this.radius * 4;
+                    this.spriteHeight = this.radius * 1.5;
+                 } else { // Se não for sprite de bolt, pode ser uma bola, então rotaciona
+                     this.rotationSpeed = (Math.random() - 0.5) * 0.2;
+                 }
+            }
+
+            update() {
+                const dtFactor = deltaTime / 16.67;
+                this.x += this.dx * dtFactor;
+                this.y += this.dy * dtFactor;
+                if (this.rotationSpeed) {
+                    this.rotation += this.rotationSpeed * dtFactor;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                // Se o sprite for uma seta/bolt, a rotação deve ser Math.PI/2 + this.initialAngle
+                // Se for uma bola que gira, this.rotation (atualizado no update)
+                ctx.rotate(this.rotation + ( (this.sprite && this.sprite.width > this.sprite.height * 1.5) ? Math.PI/2 : 0) );
+
+                if (this.sprite && this.sprite.complete) {
+                    ctx.drawImage(this.sprite, -this.spriteWidth / 2, -this.spriteHeight / 2, this.spriteWidth, this.spriteHeight);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        class PowerUp {
+            constructor(type) {
+                this.type = type;
+                this.radius = type.radius;
+                this.color = type.color;
+                this.name = type.name;
+                this.initialRotation = Math.random() * Math.PI * 2; // Rotação inicial fixa
+                this.rotationSpeed = (Math.random() - 0.5) * 0.05; // Velocidade de rotação
+                this.currentRotation = this.initialRotation;
+
+                this.pulseSize = 0;
+                this.pulseDirection = 1;
+                this.pulseSpeed = 0.12; // Pulsação mais rápida
+                this.maxPulse = 3.5;    // Pulsação maior
+
+                switch(this.type.id) {
+                    case POWER_UP_TYPES.SLOW_MOTION.id: this.sprite = gameAssets.powerUpSlowMotion; break;
+                    case POWER_UP_TYPES.WIDE_SHIELD.id: this.sprite = gameAssets.powerUpWideShield; break;
+                    case POWER_UP_TYPES.INVINCIBILITY.id: this.sprite = gameAssets.powerUpInvincibility; break;
+                    default: this.sprite = null;
+                }
+                this.spriteWidth = this.radius * 3.5;
+                this.spriteHeight = this.radius * 3.5;
+
+                const spawnAngle = Math.random() * Math.PI * 2;
+                const spawnDist = Math.max(canvasWidth, canvasHeight) * ENEMY_SPAWN_DISTANCE_FACTOR / 1.8;
+                this.x = centerX + spawnDist * Math.cos(spawnAngle);
+                this.y = centerY + spawnDist * Math.sin(spawnAngle);
+
+                const speed = 0.8;
+                const angleToCenter = Math.atan2(centerY - this.y, centerX - this.x);
+                this.dx = Math.cos(angleToCenter) * speed;
+                this.dy = Math.sin(angleToCenter) * speed;
+            }
+
+            update() {
+                const dtFactor = deltaTime / 16.67;
+                this.x += this.dx * dtFactor;
+                this.y += this.dy * dtFactor;
+                this.currentRotation += this.rotationSpeed * dtFactor;
+
+                this.pulseSize += this.pulseSpeed * this.pulseDirection * dtFactor;
+                if (this.pulseSize > this.maxPulse || this.pulseSize < 0) {
+                    this.pulseDirection *= -1;
+                    this.pulseSize = Math.max(0, Math.min(this.maxPulse, this.pulseSize)); // Clamp
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.currentRotation);
+                const currentSpriteWidth = this.spriteWidth + this.pulseSize;
+                const currentSpriteHeight = this.spriteHeight + this.pulseSize;
+
+                // Brilho elaborado
+                const glowIntensity = (Math.sin(Date.now() / 150 + this.initialRotation) + 1) / 2; // 0 to 1, faseado pela rotação inicial
+                ctx.shadowColor = this.color + "BF"; // BF = 75% alpha
+                ctx.shadowBlur = 8 + glowIntensity * 12;
+
+
+                if (this.sprite && this.sprite.complete) {
+                    ctx.drawImage(this.sprite, -currentSpriteWidth / 2, -currentSpriteHeight / 2, currentSpriteWidth, currentSpriteHeight);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius + this.pulseSize / 2, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0; // Reset shadow
+                ctx.restore();
+            }
+
+            applyEffect(gameDefender) {
+                if (activePowerUp) { deactivatePowerUp(gameDefender); }
+                activePowerUp = this;
+                powerUpTimer = POWER_UP_DURATION;
+                powerUpStatusEl.innerHTML = `Ativo: ${this.name}! (<span id="powerUpTimeLeft"></span>s)`; // Placeholder para tempo
+
+                // Efeito visual de coleta mais "explosivo"
+                emitParticles(this.x, this.y, 40, this.color, 7, 3.5, 900, Math.random()*Math.PI*2, Math.PI*2, 'circle');
+                emitParticles(this.x, this.y, 60, 'white', 5, 4, 800, Math.random()*Math.PI*2, Math.PI*2, 'spark');
+                emitParticles(this.x, this.y, 20, shadeColor(this.color, 40), 9, 2.5, 1200, Math.random()*Math.PI*2, Math.PI*2, 'square');
+
+
+                if (activePowerUp.type.id === POWER_UP_TYPES.WIDE_SHIELD.id) {
+                    gameDefender.currentArcSize = gameDefender.baseArcSize * 1.8; // Aumenta o escudo um pouco mais
+                } else if (this.type.id === POWER_UP_TYPES.INVINCIBILITY.id) {
+                    isPlanetInvincible = true;
+                }
+            }
+        }
+
+        const planet = new Planet(centerX, centerY, PLANET_RADIUS, '#3D9970');
+        const defender = new Defender(DEFENDER_ORBIT_RADIUS, DEFENDER_ARC_SIZE_BASE, DEFENDER_THICKNESS, '#7FDBFF');
+
+        function initGame() {
+            score = 0;
+            lives = 3;
+            wave = 1;
+            enemies = [];
+            powerUps = [];
+            projectiles = [];
+            particles = [];
+            defenderAngle = 0;
+            gameOver = false;
+            gameRunning = true;
+            isPaused = false;
+            activePowerUp = null;
+            powerUpTimer = 0;
+            isPlanetInvincible = false;
+            defender.baseArcSize = DEFENDER_ARC_SIZE_BASE;
+            defender.currentArcSize = defender.baseArcSize * INITIAL_DEFENDER_ARC_MULTIPLIER;
+
+            planet.sprite = gameAssets.planet;
+            defender.sprite = gameAssets.defender;
+
+            updateUI();
+            spawnWave();
+            initBlinkingStars(); // Garante que estrelas são (re)inicializadas
+            spawnDistantDebris(); // Adicionar alguns detritos e nebulosas iniciais
+
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            pauseScreen.style.display = 'none';
+            pauseButton.textContent = 'Pausar';
+            pauseButton.style.display = 'block';
+            canvas.style.display = 'block';
+        }
+
+        function updateUI() {
+            scoreEl.textContent = score;
+            livesEl.textContent = lives;
+            waveEl.textContent = wave;
+            const powerUpTimeLeftEl = document.getElementById('powerUpTimeLeft');
+            if (activePowerUp && powerUpTimeLeftEl) {
+                 powerUpTimeLeftEl.textContent = Math.ceil(powerUpTimer/1000);
+            } else if (!activePowerUp) {
+                powerUpStatusEl.textContent = "";
+            }
+        }
+
+        function spawnEnemy() {
+            let enemyTypeKey;
+            const rand = Math.random();
+            if (wave > 5 && rand < 0.25) { // SHOOTER um pouco mais comum
+                enemyTypeKey = 'SHOOTER';
+            } else if (wave > 3 && rand < 0.50) { // TOUGH aparece mais cedo
+                enemyTypeKey = 'TOUGH';
+            } else if (wave > 1 && rand < 0.75) {
+                enemyTypeKey = 'FAST';
+            } else {
+                enemyTypeKey = 'NORMAL';
+            }
+            enemies.push(new Enemy(ENEMY_TYPES[enemyTypeKey]));
+        }
+
+        function spawnPowerUp() {
+             if (Math.random() < 0.5) { // Chance um pouco maior
+                 if (activePowerUp && activePowerUp.type.id === POWER_UP_TYPES.INVINCIBILITY.id && powerUpTimer > POWER_UP_DURATION / 2) return;
+
+                const randType = Math.random();
+                let type;
+                if (randType < 0.33) type = POWER_UP_TYPES.SLOW_MOTION;
+                else if (randType < 0.66) type = POWER_UP_TYPES.WIDE_SHIELD;
+                else type = POWER_UP_TYPES.INVINCIBILITY;
+                powerUps.push(new PowerUp(type));
+            }
+        }
+
+        function spawnWave() {
+            const baseEnemies = 2;
+            const enemiesPerWaveFactor = 0.8;
+            const maxBonusEnemies = 12; // Aumentado
+
+            const numEnemies = baseEnemies + Math.min(Math.floor(wave * enemiesPerWaveFactor), maxBonusEnemies);
+
+            for (let i = 0; i < numEnemies; i++) {
+                const spawnDelay = (wave < 5) ? (1800 / numEnemies) : (2800 / numEnemies); // Atrasos levemente maiores
+                setTimeout(spawnEnemy, i * spawnDelay + 1000);
+            }
+            if (wave > 1 && wave % 2 === 0) {
+                setTimeout(spawnPowerUp, 3000); // Atraso maior
+            }
+        }
+
+        function handleDamageToPlanet() {
+            if (isPlanetInvincible) {
+                // Partículas de defesa da invencibilidade
+                emitParticles(centerX + (Math.random()-0.5)*planet.radius*1.8,
+                              centerY + (Math.random()-0.5)*planet.radius*1.8,
+                              30, POWER_UP_TYPES.INVINCIBILITY.color, 5, 3, 500, Math.random() * Math.PI * 2, Math.PI / 1.5, 'spark');
+                return;
+            }
+            lives--;
+            // Partículas de dano ao planeta mais intensas
+            emitParticles(centerX, centerY, 50, '#FF4136', 7, 5, 1000, Math.random()*Math.PI*2, Math.PI*2, 'square');
+            emitParticles(centerX, centerY, 70, '#FF6600', 6, 4.5, 900, Math.random()*Math.PI*2, Math.PI*2, 'spark');
+            updateUI();
+            document.body.style.animation = 'shake 0.35s'; // Shake um pouco mais longo
+            setTimeout(() => document.body.style.animation = '', ENEMY_HIT_SHAKE_DURATION + 50);
+
+            if (lives <= 0) {
+                triggerGameOver();
+            }
+        }
+
+        function handleInput(event) {
+            if (!gameRunning || gameOver || isPaused) return;
+            let clientX, clientY;
+            if (event.touches) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const touchX = clientX - rect.left;
+            const touchY = clientY - rect.top;
+            defenderAngle = Math.atan2(touchY - centerY, touchX - centerX);
+        }
+
+        function checkCollisions() {
+            const defenderStartAngle = normalizeAngle(defenderAngle - defender.currentArcSize / 2);
+            const defenderEndAngle = normalizeAngle(defenderAngle + defender.currentArcSize / 2);
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                const distToCenter = distance(enemy.x, enemy.y + enemy.idleAnimValue, centerX, centerY); // Considerar bobbing para colisão
+
+                if (distToCenter - enemy.radius < defender.orbitRadius + defender.thickness / 2 &&
+                    distToCenter + enemy.radius > defender.orbitRadius - defender.thickness / 2) {
+                    let enemyAngle = normalizeAngle(Math.atan2(enemy.y + enemy.idleAnimValue - centerY, enemy.x - centerX));
+                    let angleCollision = (defenderStartAngle <= defenderEndAngle) ?
+                        (enemyAngle >= defenderStartAngle && enemyAngle <= defenderEndAngle) :
+                        (enemyAngle >= defenderStartAngle || enemyAngle <= defenderEndAngle);
+
+                    if (angleCollision) {
+                        const impactX = centerX + defender.orbitRadius * Math.cos(enemyAngle);
+                        const impactY = centerY + defender.orbitRadius * Math.sin(enemyAngle);
+                        // Partículas de impacto no escudo (inimigo)
+                        emitParticles(impactX, impactY, 15, defender.color, 3, 2.2, 300, enemyAngle + Math.PI, Math.PI / 3, 'spark');
+                        emitParticles(impactX, impactY, 5, 'white', 2, 1.5, 250, enemyAngle + Math.PI, Math.PI / 4, 'circle');
+
+
+                        if (enemy.takeDamage()) {
+                            score += enemy.points;
+                            enemies.splice(i, 1);
+                        }
+                        updateUI();
+                        continue;
+                    }
+                }
+
+                if (distToCenter - enemy.radius < planet.radius) {
+                    enemies.splice(i, 1);
+                    handleDamageToPlanet();
+                    if (gameOver) return;
+                }
+            }
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const proj = projectiles[i];
+                const distToCenter = distance(proj.x, proj.y, centerX, centerY);
+
+                if (distToCenter - proj.radius < defender.orbitRadius + defender.thickness / 2 &&
+                    distToCenter + proj.radius > defender.orbitRadius - defender.thickness / 2) {
+                    let projAngle = normalizeAngle(Math.atan2(proj.y - centerY, proj.x - centerX));
+                    let angleCollision = (defenderStartAngle <= defenderEndAngle) ?
+                        (projAngle >= defenderStartAngle && projAngle <= defenderEndAngle) :
+                        (projAngle >= defenderStartAngle || projAngle <= defenderEndAngle);
+
+                    if (angleCollision) {
+                        projectiles.splice(i, 1);
+                        score += 2; // Mais pontos por defender projéteis
+                        const impactX = centerX + defender.orbitRadius * Math.cos(projAngle);
+                        const impactY = centerY + defender.orbitRadius * Math.sin(projAngle);
+                        // Partículas de impacto no escudo (projétil) - mais pronunciado
+                        emitParticles(impactX, impactY, 20, defender.color, 3.5, 2.8, 400, projAngle + Math.PI, Math.PI / 2.5, 'spark');
+                        emitParticles(impactX, impactY, 8, '#AAAAFF', 2.5, 2, 350, projAngle + Math.PI, Math.PI / 3, 'square');
+                        updateUI();
+                        continue;
+                    }
+                }
+
+                if (distToCenter - proj.radius < planet.radius) {
+                    projectiles.splice(i, 1);
+                    handleDamageToPlanet();
+                    if (gameOver) return;
+                    continue;
+                }
+
+                if (proj.x < -proj.radius - 50 || proj.x > canvasWidth + proj.radius + 50 ||
+                    proj.y < -proj.radius - 50 || proj.y > canvasHeight + proj.radius + 50) {
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const pu = powerUps[i];
+                const distToCenter = distance(pu.x, pu.y, centerX, centerY);
+
+                 if (distToCenter - pu.radius < defender.orbitRadius + defender.thickness / 2 &&
+                    distToCenter + pu.radius > defender.orbitRadius - defender.thickness / 2) {
+                    let puAngle = normalizeAngle(Math.atan2(pu.y - centerY, pu.x - centerX));
+                    let angleCollision = (defenderStartAngle <= defenderEndAngle) ?
+                        (puAngle >= defenderStartAngle && puAngle <= defenderEndAngle) :
+                        (puAngle >= defenderStartAngle || puAngle <= defenderEndAngle);
+
+                    if (angleCollision) {
+                        pu.applyEffect(defender);
+                        powerUps.splice(i, 1);
+                        updateUI();
+                    }
+                }
+                else if (distToCenter < planet.radius || distToCenter > Math.max(canvasWidth, canvasHeight) * 1.8) {
+                    powerUps.splice(i,1);
+                }
+            }
+        }
+
+        function deactivatePowerUp(gameDefender) {
+            if (!activePowerUp) return;
+
+            if (activePowerUp.type.id === POWER_UP_TYPES.WIDE_SHIELD.id) {
+                // O escudo volta ao tamanho normal gradualmente pela lógica em updateGame
+            } else if (activePowerUp.type.id === POWER_UP_TYPES.INVINCIBILITY.id) {
+                isPlanetInvincible = false;
+            }
+            activePowerUp = null;
+            // powerUpStatusEl.textContent = ""; // UI já é limpa pelo updateUI
+            updateUI();
+        }
+
+        let lastTimestamp = 0;
+        let deltaTime = 0;
+
+        function updateGame(timestamp) {
+            if (!gameRunning || gameOver) return;
+
+            deltaTime = (timestamp - (lastTimestamp || timestamp));
+            if (deltaTime > 100) deltaTime = 16.67; // Cap deltaTime para evitar saltos grandes
+            if (deltaTime <=0 ) deltaTime = 1; // Evitar deltaTime zero ou negativo
+            lastTimestamp = timestamp;
+
+            if (activePowerUp) {
+                powerUpTimer -= deltaTime;
+                if (powerUpTimer <= 0) {
+                    deactivatePowerUp(defender);
+                } else {
+                    // UI já atualiza o tempo no updateUI()
+                }
+            }
+             updateUI(); // Atualiza o tempo do powerup aqui
+
+            if (!activePowerUp || activePowerUp.type.id !== POWER_UP_TYPES.WIDE_SHIELD.id) {
+                if (defender.currentArcSize > defender.baseArcSize) {
+                    defender.currentArcSize -= DEFENDER_ARC_DECAY_RATE * (deltaTime / 1000);
+                    if (defender.currentArcSize < defender.baseArcSize) {
+                        defender.currentArcSize = defender.baseArcSize;
+                    }
+                }
+            } else { // Se WIDE_SHIELD está ativo, mantenha o tamanho aumentado
+                 defender.currentArcSize = defender.baseArcSize * 1.8;
+            }
+
+
+            enemies.forEach(enemy => enemy.update());
+            powerUps.forEach(pu => pu.update());
+            projectiles.forEach(proj => proj.update());
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(deltaTime);
+                if (particles[i].life <= 0 || (!particles[i].isNebula && particles[i].size <= 0.5)) { // Nebulosas não são removidas por tamanho
+                    particles.splice(i, 1);
+                }
+            }
+            planet.x = centerX; // Garantir que o planeta está centralizado
+            planet.y = centerY;
+
+            checkCollisions();
+            updateBlinkingStars(deltaTime);
+            spawnDistantDebris(); // Chance de spawnar detritos e nebulosas
+            
+            if (enemies.length === 0 && projectiles.length === 0 && !gameOver && gameRunning) {
+                wave++;
+                spawnWave();
+                if (!activePowerUp && powerUps.length === 0 && wave > 1 && wave % 2 !== 0) { // Chance extra se não spawnou na spawnWave
+                    if (Math.random() < 0.3) setTimeout(spawnPowerUp, 1500);
+                }
+                // updateUI(); // Já chamado no início do updateGame
+            }
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            drawBackground(); // Inclui estrelas piscantes e camadas de paralaxe
+
+            // Desenhar Nebulosas (muito distantes, atrás de outros elementos do jogo)
+            particles.filter(p => p.isNebula).forEach(p => p.draw());
+
+            // Desenhar detritos distantes (se houver e se forem diferentes das nebulosas)
+            // Esta linha pode ser ajustada ou removida se `spawnDistantDebris` focar só em nebulosas ou se a distinção não for mais necessária.
+            particles.filter(p => !p.isNebula && p.shape === 'square' && p.color.startsWith('rgba(1')).forEach(p => p.draw());
+
+
+            planet.draw();
+            defender.draw(defenderAngle);
+
+            enemies.forEach(enemy => enemy.draw());
+            powerUps.forEach(pu => pu.draw());
+            projectiles.forEach(proj => proj.draw());
+
+            // Desenhar partículas de efeitos (explosões, impactos, etc.) por cima de outros elementos.
+            // Garante que partículas que não são nebulosas nem detritos de fundo sejam desenhadas aqui.
+            particles.filter(p => !p.isNebula && !(p.shape === 'square' && p.color.startsWith('rgba(1')) ).forEach(p => p.draw());
+        }
+
+
+        function gameLoop(timestamp) {
+            if (gameOver) {
+                gameLoopActive = false;
+                return;
+            }
+            if (!gameLoopActive && gameRunning) gameLoopActive = true;
+
+
+            if (gameRunning) {
+                if (!isPaused) {
+                    updateGame(timestamp);
+                }
+                drawGame();
+            }
+
+            if (gameLoopActive) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function triggerGameOver() {
+            gameOver = true;
+            gameRunning = false;
+            gameLoopActive = false; // Parar o loop
+            finalScoreEl.textContent = score;
+            gameOverScreen.style.display = 'block';
+            // canvas.style.display = 'none'; // Não esconder o canvas para ver o último estado talvez? Ou esconder.
+            pauseButton.style.display = 'none';
+            if (activePowerUp) deactivatePowerUp(defender);
+        }
+
+        function togglePause() {
+            if (gameOver || !gameRunning) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseButton.textContent = 'Continuar';
+                pauseScreen.style.display = 'block';
+                // Não parar o gameLoopActive aqui, apenas a lógica de updateGame
+            } else {
+                pauseButton.textContent = 'Pausar';
+                pauseScreen.style.display = 'none';
+                lastTimestamp = performance.now(); // Reset timestamp para evitar salto no deltaTime
+                if (!gameLoopActive && gameRunning) { // Se o loop foi explicitamente parado (improvável aqui)
+                    gameLoopActive = true;
+                    requestAnimationFrame(gameLoop);
+                }
+            }
+        }
+
+        // Função auxiliar para escurecer/clarear cores (para partículas)
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+
+            R = (R<255)?R:255; G = (G<255)?G:255; B = (B<255)?B:255;
+            R = (R>0)?R:0; G = (G>0)?G:0; B = (B>0)?B:0;
+
+
+            const RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+            const GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+            const BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+
+            return "#"+RR+GG+BB;
+        }
+
+
+        window.addEventListener('resize', () => {
+            resizeCanvas(); // Isso já chama initBackgroundLayers e initBlinkingStars
+            if (gameRunning && !gameOver && !isPaused) {
+                drawGame();
+            } else if (startScreen.style.display === 'flex' || pauseScreen.style.display === 'block' || gameOverScreen.style.display === 'block') {
+                 ctx.clearRect(0,0,canvasWidth, canvasHeight);
+                 drawBackground(); // Redesenhar fundo estático se em tela de overlay
+            }
+        });
+
+        canvas.addEventListener('mousemove', handleInput);
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchmove', handleInput, { passive: false });
+        canvas.addEventListener('touchstart', handleInput, { passive: false });
+
+        startButton.addEventListener('click', () => {
+            if (startButton.disabled) return;
+            resizeCanvas();
+            initGame();
+            if (!gameLoopActive) {
+                gameLoopActive = true;
+                lastTimestamp = performance.now();
+                requestAnimationFrame(gameLoop);
+            }
+        });
+
+        restartButton.addEventListener('click', () => {
+            // resizeCanvas(); // Canvas size should be fine, but assets for background might need re-init if logic changes
+            initGame();
+            // initBackgroundLayers(); // initGame já deve cuidar disso ou resizeCanvas.
+            if (!gameLoopActive) {
+                gameLoopActive = true;
+                lastTimestamp = performance.now();
+                requestAnimationFrame(gameLoop);
+            }
+        });
+
+        pauseButton.addEventListener('click', togglePause);
+        resumeButton.addEventListener('click', togglePause);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && gameRunning && !isPaused && !gameOver) {
+                togglePause();
+            }
+        });
+
+        // Initial setup
+        startButton.disabled = true;
+        startButton.textContent = "Carregando...";
+        resizeCanvas(); // Chama initBackgroundLayers e initBlinkingStars
+        canvas.style.display = 'none';
+        pauseButton.style.display = 'none';
+        startScreen.style.display = 'flex';
+        ctx.clearRect(0,0,canvasWidth, canvasHeight); // Limpa o canvas inicial
+        drawBackground(); // Desenha o fundo inicial (estrelas, etc.)
+
+
+        loadAssets();
+
+
+        const styleSheet = document.createElement("style");
+        styleSheet.type = "text/css";
+        styleSheet.innerText = `
+            @keyframes shake {
+                0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                10% { transform: translate(-1px, -2px) rotate(-0.5deg); }
+                20% { transform: translate(1px, 0px) rotate(0.5deg); }
+                30% { transform: translate(2px, 1px) rotate(0deg); }
+                40% { transform: translate(1px, -1px) rotate(0.5deg); }
+                50% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+    </script>
+</body>
+</html>
